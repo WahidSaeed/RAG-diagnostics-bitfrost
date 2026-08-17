@@ -53,7 +53,6 @@ Grounded Answer + Episode Citations
 ### 1. Start OpenSearch
 
 ```bash
-cd workshop/
 docker compose up -d
 ```
 
@@ -176,20 +175,43 @@ defaults to `http://localhost:8000`). Set `GROQ_API_KEY` and
 - **Observability dashboard** — open http://localhost:8080 to see request
   logs, cache hit rate, latency, and spend in real time.
 
+### 08: RAG Failure Diagnostics
+
+Before tuning the embedding model, chunk size, or prompt, diagnose *why* a query
+is failing. `src/diagnostics.py` implements four checks, in the order you should
+run them, and the web UI's **Diagnostics** tab (next to **Chat**) exposes them
+as interactive forms:
+
+| Check | Question it answers | How |
+|---|---|---|
+| Irrelevant documents | Is the answer in the corpus at all? | Compares vector (k-NN) vs. BM25 top-k for the same query — if neither finds it, the problem is ingestion, not retrieval |
+| Answer position | Right documents, wrong answer? | Locates the answer's rank in the retrieved context and checks whether cross-encoder reranking rescues it (lost-in-the-middle detection) |
+| Phrasing sensitivity | Right sometimes, wrong sometimes? | Runs paraphrased variants of a question and measures how much the retrieved set overlaps — low overlap points at query formulation |
+| Latency breakdown | Everything is slow — where? | Times embedding, retrieval, reranking, and generation separately and names the actual bottleneck |
+
+These are also served as FastAPI endpoints on the backend:
+
+```
+POST /api/diagnose/irrelevant-documents
+POST /api/diagnose/answer-position
+POST /api/diagnose/phrasing-sensitivity
+POST /api/diagnose/latency
+```
+
 ---
 
 ## Project Structure
 
 ```md
-workshop/
+OpenSearchVectorPodcastWorkshop/
 ├── README.md
 ├── docker-compose.yml              # OpenSearch + Dashboards + Bifrost + its cache
-├── requirements.txt
+├── pyproject.toml
 ├── backend/
-│   └── main.py                     # FastAPI service (retrieval + generation via Bifrost)
-├── web/                            # Next.js chat UI
+│   └── main.py                     # FastAPI service (retrieval + generation via Bifrost, diagnostics endpoints)
+├── web/                            # Next.js chat + diagnostics UI
 │   ├── app/                        # App Router pages
-│   ├── components/                 # Sidebar, chat message view
+│   ├── components/                 # Sidebar, chat message view, diagnostics panel
 │   └── lib/                        # API client, shared types
 ├── bifrost/
 │   └── data/
@@ -205,7 +227,8 @@ workshop/
     ├── parser.py                   # Markdown → PodcastChunk objects
     ├── opensearch_client.py        # Index management, search, Aiven client
     ├── rag.py                      # RAG pipeline, routed through Bifrost
-    └── reranker.py                 # Cross-encoder re-ranking
+    ├── reranker.py                 # Cross-encoder re-ranking
+    └── diagnostics.py              # RAG failure triage (irrelevant docs, answer position, phrasing, latency)
 ```
 
 ---
