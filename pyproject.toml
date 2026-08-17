@@ -1,0 +1,20 @@
+[project]
+name = "OpenSearch-RAG-workshop"
+version = "0.1.0"
+description = "Demo of OpenSearch with RAG and Aiven"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.141.1",
+    "ipywidgets==8.1.5",
+    "jupyter==1.1.1",
+    "matplotlib==3.10.0",
+    "ollama==0.4.7",
+    "openai>=3.1.0",
+    "opensearch-py==2.7.1",
+    "python-dotenv==1.0.1",
+    "pyyaml==6.0.2",
+    "sentence-transformers==3.3.1",
+    "tqdm==4.67.1",
+    "uvicorn[standard]>=0.52.3",
+]

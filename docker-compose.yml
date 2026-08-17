@@ -1,0 +1,46 @@
+version: "3"
+services:
+  opensearch:
+    image: opensearchproject/opensearch:2.13.0
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=0penSearch!Password
+      - plugins.security.disabled=true
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.13.0
+    ports:
+      - "5601:5601"
+    environment:
+      - OPENSEARCH_HOSTS=["http://opensearch:9200"]
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    depends_on:
+      - opensearch
+
+  bifrost-cache:
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - bifrost-cache-data:/data
+
+  bifrost:
+    image: maximhq/bifrost:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./bifrost/data:/app/data
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - BIFROST_ENCRYPTION_KEY=${BIFROST_ENCRYPTION_KEY}
+    depends_on:
+      - bifrost-cache
+
+volumes:
+  opensearch-data:
+  bifrost-cache-data:

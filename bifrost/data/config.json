@@ -1,0 +1,81 @@
+{
+  "$schema": "https://www.getbifrost.ai/schema",
+  "encryption_key": "env.BIFROST_ENCRYPTION_KEY",
+
+  "client": {
+    "drop_excess_requests": false,
+    "enable_logging": true
+  },
+
+  "providers": {
+    "groq": {
+      "keys": [
+        {
+          "name": "groq-primary",
+          "value": "env.GROQ_API_KEY",
+          "models": ["*"],
+          "weight": 1.0
+        }
+      ]
+    }
+  },
+
+  "vector_store": {
+    "enabled": true,
+    "type": "redis",
+    "config": {
+      "addr": "bifrost-cache:6379"
+    }
+  },
+
+  "plugins": [
+    {
+      "enabled": true,
+      "name": "semantic_cache",
+      "config": {
+        "dimension": 1,
+        "ttl": "10m",
+        "cache_by_model": true,
+        "cache_by_provider": true,
+        "default_cache_key": "vector-podcast-rag"
+      }
+    }
+  ],
+
+  "governance": {
+    "virtual_keys": [
+      {
+        "id": "vk-rag-app",
+        "name": "vector-podcast-rag-app",
+        "description": "Budget & rate limit guard for the Vector Podcast RAG app",
+        "is_active": true,
+        "rate_limit_id": "rl-rag-app"
+      }
+    ],
+    "budgets": [
+      {
+        "id": "budget-rag-app",
+        "virtual_key_id": "vk-rag-app",
+        "max_limit": 20.00,
+        "reset_duration": "1d"
+      }
+    ],
+    "rate_limits": [
+      {
+        "id": "rl-rag-app",
+        "token_max_limit": 200000,
+        "token_reset_duration": "1h",
+        "request_max_limit": 500,
+        "request_reset_duration": "1h"
+      }
+    ]
+  },
+
+  "config_store": {
+    "enabled": true,
+    "type": "sqlite",
+    "config": {
+      "path": "./config.db"
+    }
+  }
+}
