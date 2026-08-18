@@ -160,8 +160,8 @@ class EvalExample:
     ground_truth: str
 
 
-# A small, hand-labeled question set grounded in specific Vector Podcast
-# episodes, so `reference` is checkable against the transcripts.
+# A small, hand-labeled question set grounded in specific Podcast Transcripts
+# episodes, so `reference` is checkable against them.
 EVAL_SET: list[EvalExample] = [
     EvalExample(
         question="What is HNSW and who is credited with inventing it?",

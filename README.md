@@ -1,5 +1,5 @@
 # OpenSearch + RAG Workshop
-### A semantic search & RAG system over Vector Podcast transcripts, with diagnostics and evaluation built in
+### A semantic search & RAG system over Podcast Transcripts, with diagnostics and evaluation built in
 
 ---
 
@@ -39,7 +39,7 @@ Grounded Answer + Episode Citations
 | LLM gateway | [Bifrost](https://getbifrost.ai) → Groq | Unified API, fallback chain, caching, governance |
 | Backend | FastAPI | Retrieval + generation + diagnostics + evaluation endpoints |
 | Frontend | Next.js | Chat, Diagnostics, and Evaluation tabs |
-| Data | 33 Vector Podcast transcripts (Whisper) | Knowledge base |
+| Data | 33 Podcast Transcripts (Whisper) | Knowledge base |
 
 ---
 

@@ -65,7 +65,7 @@ def ask(
     context = build_context(hits)
     model = model or DEFAULT_MODEL
 
-    user_message = f"""Context from Vector Podcast transcripts:
+    user_message = f"""Context from Podcast Transcripts:
 
 {context}
 
@@ -94,7 +94,7 @@ def ask_streaming(
     context = build_context(hits)
     model = model or DEFAULT_MODEL
 
-    user_message = f"""Context from Vector Podcast transcripts:
+    user_message = f"""Context from Podcast Transcripts:
 
 {context}
 

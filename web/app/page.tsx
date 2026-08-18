@@ -105,10 +105,10 @@ export default function Home() {
         <header className="flex items-start justify-between border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
           <div>
             <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-              🎙️ Vector Podcast — Ask Anything
+              🎙️ Podcast Transcripts — Ask Anything
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              RAG-powered Q&amp;A over 33 episodes of the Vector Podcast. Backed by
+              RAG-powered Q&amp;A over 33 Podcast Transcripts. Backed by
               OpenSearch k-NN + Groq.
             </p>
           </div>

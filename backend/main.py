@@ -1,4 +1,4 @@
-"""FastAPI backend for the Vector Podcast RAG app, consumed by the Next.js frontend."""
+"""FastAPI backend for the Podcast Transcripts RAG app, consumed by the Next.js frontend."""
 import json
 import os
 import queue
@@ -31,7 +31,7 @@ from src.diagnostics import (
 )
 from src.evaluate import run_evaluation_json, EvalExample, EVAL_SET
 
-app = FastAPI(title="Vector Podcast RAG API")
+app = FastAPI(title="Podcast Transcripts RAG API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -106,7 +106,7 @@ def chat(req: ChatRequest):
 
     context = build_context(hits)
     user_message = (
-        f"Context from Vector Podcast transcripts:\n\n{context}\n\n"
+        f"Context from Podcast Transcripts:\n\n{context}\n\n"
         f"---\nQuestion: {req.question}"
     )
     model = req.model or DEFAULT_MODEL

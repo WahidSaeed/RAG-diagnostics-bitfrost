@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vector Podcast RAG",
-  description: "RAG-powered Q&A over the Vector Podcast, backed by OpenSearch + Groq.",
+  title: "Podcast Transcripts RAG",
+  description: "RAG-powered Q&A over Podcast Transcripts, backed by OpenSearch + Groq.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

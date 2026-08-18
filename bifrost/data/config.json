@@ -47,7 +47,7 @@
       {
         "id": "vk-rag-app",
         "name": "vector-podcast-rag-app",
-        "description": "Budget & rate limit guard for the Vector Podcast RAG app",
+        "description": "Budget & rate limit guard for the Podcast Transcripts RAG app",
         "is_active": true,
         "rate_limit_id": "rl-rag-app"
       }
