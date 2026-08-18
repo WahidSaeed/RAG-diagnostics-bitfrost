@@ -1,6 +1,8 @@
 """FastAPI backend for the Vector Podcast RAG app, consumed by the Next.js frontend."""
 import json
 import os
+import queue
+import threading
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -16,7 +18,7 @@ from src.rag import (
     SYSTEM_PROMPT,
     build_context,
     DEFAULT_MODEL,
-    FALLBACK_MODEL,
+    FALLBACK_MODELS,
     BIFROST_CACHE_KEY,
     get_bifrost_client,
     ask,
@@ -27,6 +29,7 @@ from src.diagnostics import (
     diagnose_phrasing_sensitivity,
     diagnose_latency,
 )
+from src.evaluate import run_evaluation_json, EvalExample, EVAL_SET
 
 app = FastAPI(title="Vector Podcast RAG API")
 
@@ -72,6 +75,16 @@ class DiagnoseLatencyRequest(BaseModel):
     use_reranking: bool = True
 
 
+class EvalExampleRequest(BaseModel):
+    question: str
+    ground_truth: str
+
+
+class EvaluateRequest(BaseModel):
+    top_k: int = 5
+    examples: list[EvalExampleRequest] | None = None
+
+
 @app.get("/api/health")
 def health():
     count = os_client.count(index=INDEX_NAME)["count"]
@@ -108,7 +121,7 @@ def chat(req: ChatRequest):
                     {"role": "user", "content": user_message},
                 ],
                 stream=True,
-                extra_body={"fallbacks": [FALLBACK_MODEL]},
+                extra_body={"fallbacks": FALLBACK_MODELS},
                 extra_headers={"x-bf-cache-key": BIFROST_CACHE_KEY},
             )
             for chunk in stream:
@@ -179,3 +192,57 @@ def diagnose_latency_endpoint(req: DiagnoseLatencyRequest):
         "bottleneck": report.bottleneck,
         "diagnosis": report.diagnosis,
     }
+
+
+# ── RAGAS: pipeline-wide quality evaluation ──────────────────────────────────
+
+
+@app.get("/api/eval-set")
+def get_eval_set():
+    """The default labeled question set, so the UI can display/edit/extend it."""
+    return [{"question": e.question, "ground_truth": e.ground_truth} for e in EVAL_SET]
+
+
+@app.post("/api/evaluate")
+def evaluate_endpoint(req: EvaluateRequest):
+    """Score the pipeline against a labeled question set (the default EVAL_SET,
+    or a custom `examples` list from the UI), streaming progress as it goes
+    (retrieval+generation per question, then RAGAS judging per metric). Takes
+    a few minutes: each sample runs several judge-LLM calls (faithfulness,
+    relevancy, context precision/recall).
+    """
+    events: queue.Queue = queue.Queue()
+    examples = (
+        [EvalExample(question=e.question, ground_truth=e.ground_truth) for e in req.examples]
+        if req.examples
+        else None
+    )
+
+    def on_event(record: dict):
+        events.put({"type": "log", **record})
+
+    def worker():
+        try:
+            result = run_evaluation_json(
+                top_k=req.top_k,
+                client=os_client,
+                embed_model=embed_model,
+                on_event=on_event,
+                examples=examples,
+            )
+            events.put({"type": "result", **result})
+        except Exception as exc:
+            events.put({"type": "error", "message": str(exc)})
+        finally:
+            events.put({"type": "done"})
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    def event_stream():
+        while True:
+            event = events.get()
+            yield json.dumps(event) + "\n"
+            if event["type"] == "done":
+                break
+
+    return StreamingResponse(event_stream(), media_type="application/x-ndjson")

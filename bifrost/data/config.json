@@ -34,7 +34,7 @@
       "name": "semantic_cache",
       "config": {
         "dimension": 1,
-        "ttl": "10m",
+        "ttl": "24h",
         "cache_by_model": true,
         "cache_by_provider": true,
         "default_cache_key": "vector-podcast-rag"

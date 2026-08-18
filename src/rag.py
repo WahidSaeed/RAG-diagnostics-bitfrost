@@ -3,8 +3,21 @@ import os
 from openai import OpenAI
 
 
-DEFAULT_MODEL = os.getenv("GROQ_MODEL", "groq/openai/gpt-oss-120b")
-FALLBACK_MODEL = os.getenv("GROQ_FALLBACK_MODEL", "groq/openai/gpt-oss-20b")
+# Bifrost routes "<provider>/<model>" and strips the leading "groq/" as the
+# provider name — but Groq's actual model id for these two IS "groq/compound"
+# / "groq/compound-mini" (the prefix is baked into the id itself, confirmed
+# directly against api.groq.com). So through Bifrost they need the doubled
+# "groq/groq/compound" form, or Bifrost forwards a bare "compound" that Groq
+# 404s on.
+DEFAULT_MODEL = os.getenv("GROQ_MODEL", "groq/groq/compound")
+FALLBACK_MODEL = os.getenv("GROQ_FALLBACK_MODEL", "groq/groq/compound-mini")
+# Tried in order after DEFAULT_MODEL. compound/compound-mini are kept as the
+# primary/first-fallback pair per priority; the gpt-oss models are further
+# fallbacks. Note: compound is Groq's agentic model and internally routes
+# part of its pipeline through openai/gpt-oss-120b, so it can still fail if
+# that specific model is rate-limited org-wide, even though compound itself
+# has no separate daily token cap.
+FALLBACK_MODELS = [FALLBACK_MODEL, "groq/openai/gpt-oss-120b", "groq/openai/gpt-oss-20b"]
 BIFROST_BASE_URL = os.getenv("BIFROST_BASE_URL", "http://localhost:8080/v1")
 BIFROST_CACHE_KEY = "vector-podcast-rag"
 
@@ -65,7 +78,7 @@ Question: {question}"""
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
-        extra_body={"fallbacks": [FALLBACK_MODEL]},
+        extra_body={"fallbacks": FALLBACK_MODELS},
         extra_headers={"x-bf-cache-key": BIFROST_CACHE_KEY},
     )
     return response.choices[0].message.content
@@ -95,7 +108,7 @@ Question: {question}"""
             {"role": "user", "content": user_message},
         ],
         stream=True,
-        extra_body={"fallbacks": [FALLBACK_MODEL]},
+        extra_body={"fallbacks": FALLBACK_MODELS},
         extra_headers={"x-bf-cache-key": BIFROST_CACHE_KEY},
     )
     for chunk in stream:

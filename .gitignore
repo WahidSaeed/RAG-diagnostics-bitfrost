@@ -165,3 +165,6 @@ bifrost/data/config.db
 bifrost/data/*.db
 bifrost/data/*.db-shm
 bifrost/data/*.db-wal
+
+# Evaluation telemetry traces
+logs/

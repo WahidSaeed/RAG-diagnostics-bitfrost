@@ -4,11 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import ChatMessageView from "@/components/ChatMessageView";
 import DiagnosticsPanel from "@/components/DiagnosticsPanel";
+import EvaluationPanel from "@/components/EvaluationPanel";
 import { fetchHealth, streamChat } from "@/lib/api";
 import { ChatMessage, HealthInfo, SearchMode } from "@/lib/types";
 
+type View = "chat" | "diagnostics" | "evaluation";
+
 export default function Home() {
-  const [view, setView] = useState<"chat" | "diagnostics">("chat");
+  const [view, setView] = useState<View>("chat");
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [searchMode, setSearchMode] = useState<SearchMode>("hybrid");
   const [topK, setTopK] = useState(5);
@@ -130,11 +133,23 @@ export default function Home() {
             >
               Diagnostics
             </button>
+            <button
+              onClick={() => setView("evaluation")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                view === "evaluation"
+                  ? "bg-orange-600 text-white"
+                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              }`}
+            >
+              Evaluation
+            </button>
           </div>
         </header>
 
         {view === "diagnostics" ? (
           <DiagnosticsPanel />
+        ) : view === "evaluation" ? (
+          <EvaluationPanel />
         ) : (
           <>
             <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-6">
