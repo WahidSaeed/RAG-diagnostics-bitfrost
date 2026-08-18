@@ -21,3 +21,8 @@ dependencies = [
     "tqdm==4.67.1",
     "uvicorn[standard]>=0.52.3",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

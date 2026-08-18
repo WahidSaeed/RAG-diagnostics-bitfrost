@@ -33,6 +33,39 @@ function DiagnosisBanner({ text }: { text: string | null }) {
   );
 }
 
+// Real, verified-working inputs for each check, grounded in the actual
+// indexed transcripts — so the panel is usable without first knowing a
+// query/answer pair that will actually surface something.
+const EXAMPLES = {
+  irrelevant: {
+    query: "What is HNSW and who is credited with inventing it?",
+    answerSubstring: "Yury Malkov",
+  },
+  position: {
+    query: "Does Jina AI's HNSW implementation use Python bindings over a C++ core?",
+    answerSubstring: "most of the heavy lifting is done under c++ level",
+  },
+  phrasing: [
+    "What is HNSW?",
+    "Explain the HNSW algorithm for approximate nearest neighbor search",
+  ],
+  latency: {
+    query: "What is HNSW?",
+  },
+};
+
+function ExampleButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="self-start text-xs text-orange-600 hover:underline dark:text-orange-400"
+    >
+      Use example
+    </button>
+  );
+}
+
 function RunButton({ loading, disabled }: { loading: boolean; disabled?: boolean }) {
   return (
     <button
@@ -70,25 +103,72 @@ function TextField({
   );
 }
 
-function HitList({ title, hits }: { title: string; hits: Source[] }) {
+function containsSubstring(hit: Source, needle: string): boolean {
+  const n = needle.toLowerCase();
+  return hit.chunk_text.toLowerCase().includes(n) || hit.episode_title.toLowerCase().includes(n);
+}
+
+function hitKey(hit: Source): string {
+  return `${hit.episode_title}::${hit.chunk_index}`;
+}
+
+function HitList({
+  title,
+  hits,
+  isHighlighted,
+  badgeFor,
+}: {
+  title: string;
+  hits: Source[];
+  /** Marks a hit as "the one we were looking for" (e.g. contains the answer). */
+  isHighlighted?: (hit: Source) => boolean;
+  /** Per-hit pill, e.g. "shared" vs "only here" across phrasings. */
+  badgeFor?: (hit: Source) => { label: string; tone: "shared" | "unique" } | null;
+}) {
   return (
-    <div className="flex-1">
-      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+    <div className="min-w-0 flex-1">
+      <h4 className="mb-2 truncate text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400" title={title}>
         {title}
       </h4>
       <ol className="flex flex-col gap-2">
-        {hits.map((h, i) => (
-          <li
-            key={i}
-            className="rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs dark:border-zinc-800 dark:bg-zinc-900"
-          >
-            <div className="mb-1 flex justify-between text-zinc-500 dark:text-zinc-400">
-              <span>#{i + 1} · {h.episode_title}</span>
-              <span>{h.score.toFixed(3)}</span>
-            </div>
-            <p className="line-clamp-3 text-zinc-700 dark:text-zinc-300">{h.chunk_text}</p>
-          </li>
-        ))}
+        {hits.map((h, i) => {
+          const highlighted = isHighlighted?.(h) ?? false;
+          const badge = badgeFor?.(h) ?? null;
+          return (
+            <li
+              key={i}
+              className={`rounded-md border p-2 text-xs ${
+                highlighted
+                  ? "border-orange-400 bg-orange-50 dark:border-orange-700 dark:bg-orange-950/30"
+                  : "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+              }`}
+            >
+              <div className="mb-1 flex items-center justify-between gap-2 text-zinc-500 dark:text-zinc-400">
+                <span className="truncate">#{i + 1} · {h.episode_title}</span>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {highlighted && (
+                    <span className="rounded bg-orange-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                      answer
+                    </span>
+                  )}
+                  {badge && (
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                        badge.tone === "shared"
+                          ? "bg-green-600 text-white"
+                          : "bg-zinc-300 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300"
+                      }`}
+                    >
+                      {badge.label}
+                    </span>
+                  )}
+                  <span>{h.score.toFixed(3)}</span>
+                </span>
+              </div>
+              <p className="line-clamp-3 text-zinc-700 dark:text-zinc-300">{h.chunk_text}</p>
+            </li>
+          );
+        })}
         {hits.length === 0 && (
           <li className="text-xs text-zinc-400">No hits.</li>
         )}
@@ -131,6 +211,12 @@ function IrrelevantDocsTab() {
           value={answerSubstring}
           onChange={setAnswerSubstring}
           placeholder="A phrase you know is in the transcript"
+        />
+        <ExampleButton
+          onClick={() => {
+            setQuery(EXAMPLES.irrelevant.query);
+            setAnswerSubstring(EXAMPLES.irrelevant.answerSubstring);
+          }}
         />
         <RunButton loading={loading} disabled={!query.trim()} />
       </form>
@@ -193,13 +279,19 @@ function AnswerPositionTab() {
           onChange={setAnswerSubstring}
           placeholder="A phrase from the correct chunk"
         />
+        <ExampleButton
+          onClick={() => {
+            setQuery(EXAMPLES.position.query);
+            setAnswerSubstring(EXAMPLES.position.answerSubstring);
+          }}
+        />
         <RunButton loading={loading} disabled={!query.trim() || !answerSubstring.trim()} />
       </form>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {result && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <DiagnosisBanner text={result.diagnosis} />
           <div className="flex gap-6 text-sm">
             <div>
@@ -214,6 +306,18 @@ function AnswerPositionTab() {
                 {result.reranked_answer_rank ?? "not found"}
               </div>
             </div>
+          </div>
+          <div className="flex gap-4">
+            <HitList
+              title="Before rerank"
+              hits={result.hits}
+              isHighlighted={(h) => containsSubstring(h, answerSubstring)}
+            />
+            <HitList
+              title="After rerank"
+              hits={result.reranked_hits}
+              isHighlighted={(h) => containsSubstring(h, answerSubstring)}
+            />
           </div>
         </div>
       )}
@@ -276,13 +380,14 @@ function PhrasingSensitivityTab() {
         >
           + Add another phrasing
         </button>
+        <ExampleButton onClick={() => setVariants(EXAMPLES.phrasing)} />
         <RunButton loading={loading} disabled={filled.length < 2} />
       </form>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {result && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <DiagnosisBanner text={result.diagnosis} />
           <div>
             <div className="mb-1 flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
@@ -296,8 +401,42 @@ function PhrasingSensitivityTab() {
               />
             </div>
           </div>
+          <PhrasingHitSets result={result} />
         </div>
       )}
+    </div>
+  );
+}
+
+function PhrasingHitSets({ result }: { result: PhrasingSensitivityResult }) {
+  const keyCounts = new Map<string, number>();
+  for (const hits of result.hit_sets) {
+    for (const key of new Set(hits.map(hitKey))) {
+      keyCounts.set(key, (keyCounts.get(key) ?? 0) + 1);
+    }
+  }
+  const totalVariants = result.hit_sets.length;
+
+  return (
+    <div>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        Retrieved chunks per phrasing
+      </h3>
+      <div className="flex gap-4 overflow-x-auto pb-1">
+        {result.hit_sets.map((hits, i) => (
+          <div key={i} className="w-72 shrink-0">
+            <HitList
+              title={result.variants[i]}
+              hits={hits}
+              badgeFor={(h) =>
+                keyCounts.get(hitKey(h)) === totalVariants
+                  ? { label: "shared", tone: "shared" }
+                  : { label: "only here", tone: "unique" }
+              }
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -340,6 +479,7 @@ function LatencyTab() {
           />
           Include reranking stage
         </label>
+        <ExampleButton onClick={() => setQuery(EXAMPLES.latency.query)} />
         <RunButton loading={loading} disabled={!query.trim()} />
       </form>
 

@@ -165,6 +165,8 @@ def diagnose_answer_position_endpoint(req: DiagnoseAnswerPositionRequest):
         "answer_rank": report.answer_rank,
         "reranked_answer_rank": report.reranked_answer_rank,
         "diagnosis": report.diagnosis,
+        "hits": report.hits,
+        "reranked_hits": report.reranked_hits,
     }
 
 
@@ -177,6 +179,7 @@ def diagnose_phrasing_sensitivity_endpoint(req: DiagnosePhrasingRequest):
         "variants": report.variants,
         "overlap_ratio": report.overlap_ratio,
         "diagnosis": report.diagnosis,
+        "hit_sets": report.hit_sets,
     }
 
 

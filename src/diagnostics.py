@@ -18,6 +18,19 @@ from .opensearch_client import bm25_search, hybrid_search, knn_search
 from .reranker import rerank
 
 
+def _hit_contains(hit: dict, needle: str) -> bool:
+    """Whether `needle` appears anywhere the LLM would actually see it.
+
+    build_context() (src/rag.py) prepends "Episode: {episode_title}" to every
+    chunk's text before it reaches the model, so an answer_substring that only
+    lives in the episode title (e.g. a guest's name, which is often in the
+    frontmatter title but never spoken verbatim in the transcript body) is
+    still part of the grounding context -- checking chunk_text alone would
+    misdiagnose a working retrieval as an ingestion failure.
+    """
+    return needle in hit["chunk_text"].lower() or needle in hit["episode_title"].lower()
+
+
 # ── 1. Irrelevant documents ──────────────────────────────────────────────────
 
 
@@ -50,8 +63,8 @@ def diagnose_irrelevant_documents(
     vector_found = bm25_found = None
     if answer_substring:
         needle = answer_substring.lower()
-        vector_found = any(needle in h["chunk_text"].lower() for h in vector_hits)
-        bm25_found = any(needle in h["chunk_text"].lower() for h in bm25_hits)
+        vector_found = any(_hit_contains(h, needle) for h in vector_hits)
+        bm25_found = any(_hit_contains(h, needle) for h in bm25_hits)
 
     if answer_substring is None:
         diagnosis = "No answer_substring given — inspect vector_hits/bm25_hits manually."
@@ -103,12 +116,12 @@ def diagnose_answer_position(
     needle = answer_substring.lower()
 
     answer_rank = next(
-        (i for i, h in enumerate(hits, 1) if needle in h["chunk_text"].lower()), None
+        (i for i, h in enumerate(hits, 1) if _hit_contains(h, needle)), None
     )
 
     reranked = rerank(query, list(hits), top_n=k)
     reranked_rank = next(
-        (i for i, h in enumerate(reranked, 1) if needle in h["chunk_text"].lower()), None
+        (i for i, h in enumerate(reranked, 1) if _hit_contains(h, needle)), None
     )
 
     if answer_rank is None:
